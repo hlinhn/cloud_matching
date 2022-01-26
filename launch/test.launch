@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- <include file="$(find enway_bringup)/launch/load_parameters.launch"/> -->
+    <include file="$(find enway_bringup)/launch/donner/donner_robosense_packet.launch"/>
+    <include file="$(find enway_bringup)/launch/donner/filter.launch">
+        <arg name="state" value="true"/>
+    </include>
+    <include file="$(find merge_maps_3d)/launch/node.launch" />
+</launch>

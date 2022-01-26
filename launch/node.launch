@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="gdb" default="false" />
+  <arg name="callgrind" default="false" />
+
+  <arg if="$(arg gdb)" name="prefix" value="xterm -e gdb --args" />
+  <arg if="$(arg callgrind)" name="prefix" value="valgrind --tool=callgrind --instr-atstart=no" />
+  <param if="$(arg callgrind)" name="/bond_disable_heartbeat_timeout" value="true" />
+  <arg if="$(eval not callgrind and not gdb)" name="prefix" value="" />
+
+  <node name="merge_maps_3d" pkg="merge_maps_3d" type="merge_maps_3d" launch-prefix="$(arg prefix)">
+    <remap from="/point_cloud" to="/sensors/lidar/front_mid/point_cloud_raw" />
+    <remap from="/imu" to="/sensors/imu/front_mid" />
+    <!-- <remap from="/odom" to="/donner_articulated_drive_controller/odom"/> -->
+  </node>
+</launch>
