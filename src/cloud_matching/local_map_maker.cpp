@@ -16,10 +16,6 @@ cloud_matching::LocalMapMaker::addCloud(Cloud::Ptr cloud, std::optional<Eigen::M
   if (first_cloud_)
   {
     *current_cloud_ += *cloud;
-    // if (!initial)
-    // {
-    //   origin_ = origin_ * initial.value();
-    // }
     first_cloud_ = false;
     return Eigen::Matrix4f::Identity();
   }
@@ -42,7 +38,6 @@ cloud_matching::LocalMapMaker::addCloud(Cloud::Ptr cloud, std::optional<Eigen::M
 void
 cloud_matching::LocalMapMaker::restart(Eigen::Matrix4f new_origin, Cloud::Ptr seed_cloud)
 {
-  // first_cloud_ = true;
   current_cloud_.reset(new Cloud(*seed_cloud));
   current_position_ = Eigen::Matrix4f::Identity();
   origin_ = new_origin;

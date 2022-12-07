@@ -153,17 +153,12 @@ cloud_matching::Node::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& ms
   pcl::fromROSMsg(*msg, *cloud);
   Cloud::Ptr filtered_cloud = filter(cloud);
   const auto initial_guess = initialGuess(current_odom_position_copy);
-  // std::cout << "Initial guess ";
-  // print_mat(initial_guess.value());
   auto current_lidar_odom = local_map_maker_.addCloud(filtered_cloud, initial_guess);
 
   if (!current_lidar_odom)
   {
     return;
   }
-
-  // std::cout << "Fixed ";
-  // print_mat(current_lidar_odom.value());
 
   last_local_position_ = current_lidar_odom.value();
   current_lidar_odom_position_ = last_lidar_odom_position_ * last_local_position_;

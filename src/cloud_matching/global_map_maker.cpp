@@ -27,12 +27,6 @@ cloud_matching::GlobalMapMaker::GlobalMapMaker()
   optimizer_.reset(new G2oOptimizer());
 }
 
-// void
-// cloud_matching::GlobalMapMaker::setConfig(Config config)
-// {
-//   config_ = config;
-// }
-
 Eigen::MatrixXd
 getConstantInformationMatrix()
 {
@@ -97,12 +91,6 @@ cloud_matching::GlobalMapMaker::addImuEdge(const int node_id, std::optional<Eige
   auto information_matrix = getImuInformationMatrix();
   optimizer_->addUnaryEdge(node_id, Eigen::Vector3d(0, 0.0, -1.0), imu_data.value(), information_matrix);
 }
-
-// double
-// cloud_matching::GlobalMapMaker::calculateIOU(int test_node, int propose_node)
-// {
-
-// }
 
 std::optional<std::vector<cloud_matching::Matching>>
 cloud_matching::GlobalMapMaker::checkLoopClosure(const int node_id)
@@ -200,7 +188,7 @@ cloud_matching::GlobalMapMaker::checkPair(std::pair<int, int> candidate)
   name += std::string("_");
   name += std::to_string(candidate.second);
   name += std::string(".pcd");
-  pcl::io::savePCDFileBinary(name, *matching_data.value().second);
+  // pcl::io::savePCDFileBinary(name, *matching_data.value().second);
 
   return matching_data.value().first;
 }
@@ -230,12 +218,6 @@ cloud_matching::GlobalMapMaker::createMap()
   {
     Cloud::Ptr transformed(new Cloud());
     pcl::transformPointCloud(*node_data.second.cloud_, *transformed, node_data.second.position_);
-    // std::cout << "ID " << node_data.first << "\n";
-    // print_mat(node_data.second.position_);
-    // std::string name("");
-    // name += std::to_string(node_data.first);
-    // name += std::string(".pcd");
-    // pcl::io::savePCDFileBinary(name, *node_data.second.cloud_);
     *all_cloud += *transformed;
   }
   return all_cloud;
