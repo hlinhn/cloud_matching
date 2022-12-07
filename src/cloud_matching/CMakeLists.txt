@@ -7,7 +7,6 @@ set(SOURCES
   g2o_optimizer.cpp
   local_map_maker.cpp
   global_map_maker.cpp
-  cloud_matching.cpp
   node.cpp
   main.cpp
   )
