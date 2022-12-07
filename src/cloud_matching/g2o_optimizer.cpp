@@ -1,6 +1,6 @@
-#include "merge_maps_3d/g2o_optimizer.h"
-#include "merge_maps_3d/converter.h"
-#include "merge_maps_3d/edge_se3_priorvec.hpp"
+#include "cloud_matching/g2o_optimizer.h"
+#include "cloud_matching/converter.h"
+#include "cloud_matching/edge_se3_priorvec.hpp"
 
 #include <g2o/core/factory.h>
 #include <g2o/core/optimization_algorithm_factory.h>
@@ -15,7 +15,7 @@ namespace g2o
 G2O_REGISTER_TYPE(EDGE_SE3_PRIORVEC, EdgeSE3PriorVec)
 }
 
-merge_maps_3d::G2oOptimizer::G2oOptimizer()
+cloud_matching::G2oOptimizer::G2oOptimizer()
   : last_num_edges_ {0}
 {
   graph_.reset(new g2o::SparseOptimizer());
@@ -23,13 +23,13 @@ merge_maps_3d::G2oOptimizer::G2oOptimizer()
   graph_->setAlgorithm(g2o::OptimizationAlgorithmFactory::instance()->construct("lm_var", solver_property));
 }
 
-merge_maps_3d::G2oOptimizer::~G2oOptimizer()
+cloud_matching::G2oOptimizer::~G2oOptimizer()
 {
   graph_.reset();
 }
 
 bool
-merge_maps_3d::G2oOptimizer::addNode(Eigen::Matrix4f estimate, int id, bool fixed)
+cloud_matching::G2oOptimizer::addNode(Eigen::Matrix4f estimate, int id, bool fixed)
 {
   g2o::VertexSE3* vertex(new g2o::VertexSE3());
   vertex->setId(id);
@@ -41,7 +41,15 @@ merge_maps_3d::G2oOptimizer::addNode(Eigen::Matrix4f estimate, int id, bool fixe
 }
 
 bool
-merge_maps_3d::G2oOptimizer::addEdge(int id_to, int id_from, Eigen::Matrix4f connection, Eigen::MatrixXd information)
+cloud_matching::G2oOptimizer::updateNode(Eigen::Matrix4f estimate, int id)
+{
+  auto vertex = node_lookup_[id];
+  vertex->setEstimate(toIsometry(estimate));
+  return true;
+}
+
+bool
+cloud_matching::G2oOptimizer::addEdge(int id_to, int id_from, Eigen::Matrix4f connection, Eigen::MatrixXd information)
 {
   g2o::EdgeSE3* edge(new g2o::EdgeSE3());
   edge->setMeasurement(toIsometry(connection));
@@ -53,10 +61,10 @@ merge_maps_3d::G2oOptimizer::addEdge(int id_to, int id_from, Eigen::Matrix4f con
 }
 
 bool
-merge_maps_3d::G2oOptimizer::addUnaryEdge(int id,
-                                          const Eigen::Vector3d direction,
-                                          const Eigen::Vector3d measurement,
-                                          const Eigen::MatrixXd information)
+cloud_matching::G2oOptimizer::addUnaryEdge(int id,
+                                           const Eigen::Vector3d direction,
+                                           const Eigen::Vector3d measurement,
+                                           const Eigen::MatrixXd information)
 {
   g2o::EdgeSE3PriorVec* edge(new g2o::EdgeSE3PriorVec());
   Eigen::Matrix<double, 6, 1> vec_measurement;
@@ -70,7 +78,7 @@ merge_maps_3d::G2oOptimizer::addUnaryEdge(int id,
 }
 
 bool
-merge_maps_3d::G2oOptimizer::optimize()
+cloud_matching::G2oOptimizer::optimize()
 {
   if (graph_->edges().size() - last_num_edges_ < 10)
   {
@@ -80,13 +88,13 @@ merge_maps_3d::G2oOptimizer::optimize()
   graph_->initializeOptimization();
   graph_->setVerbose(true);
   double before = graph_->chi2();
-  graph_->optimize(5);
+  graph_->optimize(100);
   std::cout << "Before " << before << " after " << graph_->chi2() << std::endl;
   return true;
 }
 
 std::map<int, Eigen::Matrix4f>
-merge_maps_3d::G2oOptimizer::retrieveCorrected()
+cloud_matching::G2oOptimizer::retrieveCorrected()
 {
   std::map<int, Eigen::Matrix4f> data;
   for (const auto node : graph_->vertices())

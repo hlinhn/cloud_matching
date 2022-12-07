@@ -1,7 +1,7 @@
-#include "merge_maps_3d/local_map_maker.h"
-#include "merge_maps_3d/gicp_matcher.h"
+#include "cloud_matching/local_map_maker.h"
+#include "cloud_matching/gicp_matcher.h"
 
-merge_maps_3d::LocalMapMaker::LocalMapMaker()
+cloud_matching::LocalMapMaker::LocalMapMaker()
   : first_cloud_(true)
 {
   current_cloud_.reset(new Cloud());
@@ -11,7 +11,7 @@ merge_maps_3d::LocalMapMaker::LocalMapMaker()
 }
 
 std::optional<Eigen::Matrix4f>
-merge_maps_3d::LocalMapMaker::addCloud(Cloud::Ptr cloud, std::optional<Eigen::Matrix4f> initial)
+cloud_matching::LocalMapMaker::addCloud(Cloud::Ptr cloud, std::optional<Eigen::Matrix4f> initial)
 {
   if (first_cloud_)
   {
@@ -40,7 +40,7 @@ merge_maps_3d::LocalMapMaker::addCloud(Cloud::Ptr cloud, std::optional<Eigen::Ma
 }
 
 void
-merge_maps_3d::LocalMapMaker::restart(Eigen::Matrix4f new_origin, Cloud::Ptr seed_cloud)
+cloud_matching::LocalMapMaker::restart(Eigen::Matrix4f new_origin, Cloud::Ptr seed_cloud)
 {
   // first_cloud_ = true;
   current_cloud_.reset(new Cloud(*seed_cloud));
@@ -49,15 +49,15 @@ merge_maps_3d::LocalMapMaker::restart(Eigen::Matrix4f new_origin, Cloud::Ptr see
 }
 
 Cloud::Ptr
-merge_maps_3d::LocalMapMaker::getCloud()
+cloud_matching::LocalMapMaker::getCloud()
 {
   return current_cloud_;
 }
 
-std::optional<merge_maps_3d::MapNode>
-merge_maps_3d::LocalMapMaker::nodeReady()
+std::optional<cloud_matching::MapNode>
+cloud_matching::LocalMapMaker::nodeReady()
 {
-  if ((current_position_.block<3, 1>(0, 3).norm() < 3.5) && current_cloud_->size() < 700000)
+  if ((current_position_.block<2, 1>(0, 3).norm() < 2.0) && current_cloud_->size() < 700000)
   {
     return std::nullopt;
   }

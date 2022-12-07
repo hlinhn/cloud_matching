@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>merge_maps_3d</name>
+  <name>cloud_matching</name>
   <version>1.0.0</version>
   <description>
-    TODO merge_maps_3d description
+    TODO cloud_matching description
   </description>
 
   <author email="linh.nguyen@enway.ai">Linh Nguyen</author>
@@ -23,7 +23,8 @@
   <depend>geometry_msgs</depend>
   <depend>visualization_msgs</depend>
   <depend>ndt_omp</depend>
-  <depend>phaser_core</depend>
+  <!-- <depend>phaser_core</depend> -->
+  <depend>dynamic_reconfigure</depend>
   <build_depend>libg2o</build_depend>
 
 </package>

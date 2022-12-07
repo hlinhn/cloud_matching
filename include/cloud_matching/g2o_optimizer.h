@@ -1,12 +1,12 @@
-#ifndef MERGE_MAPS_3D_G2O_OPTIMIZER_H_
-#define MERGE_MAPS_3D_G2O_OPTIMIZER_H_
+#ifndef CLOUD_MATCHING_G2O_OPTIMIZER_H_
+#define CLOUD_MATCHING_G2O_OPTIMIZER_H_
 
-#include "merge_maps_3d/optimizer.h"
+#include "cloud_matching/optimizer.h"
 #include <g2o/core/sparse_optimizer.h>
 #include <g2o/types/slam3d/types_slam3d.h>
 #include <memory>
 
-namespace merge_maps_3d
+namespace cloud_matching
 {
 class G2oOptimizer final : public Optimizer
 {
@@ -15,6 +15,7 @@ public:
   ~G2oOptimizer() override;
 
   bool addNode(Eigen::Matrix4f estimate, int id, bool fixed) override;
+  bool updateNode(Eigen::Matrix4f estimate, int id) override;
   bool addUnaryEdge(int id,
                     const Eigen::Vector3d direction,
                     const Eigen::Vector3d measurement,
@@ -28,6 +29,6 @@ private:
   std::map<int, g2o::VertexSE3*> node_lookup_;
   int last_num_edges_;
 };
-} // namespace merge_maps_3d
+} // namespace cloud_matching
 
 #endif

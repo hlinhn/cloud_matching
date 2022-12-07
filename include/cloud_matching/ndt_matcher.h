@@ -1,11 +1,11 @@
-#ifndef MERGE_MAPS_3D_NDT_MERGER_H_
-#define MERGE_MAPS_3D_NDT_MERGER_H_
+#ifndef CLOUD_MATCHING_NDT_MERGER_H_
+#define CLOUD_MATCHING_NDT_MERGER_H_
 
-#include "merge_maps_3d/cloud_merger.h"
+#include "cloud_matching/cloud_merger.h"
 #include <pcl/filters/voxel_grid.h>
 #include <pclomp/ndt_omp.h>
 
-namespace merge_maps_3d
+namespace cloud_matching
 {
 class NdtMatcher final : public CloudMerger
 {
@@ -23,6 +23,6 @@ private:
   Cloud::Ptr downsample(Cloud::Ptr cloud);
   bool isCompatible();
 };
-} // namespace merge_maps_3d
+} // namespace cloud_matching
 
 #endif

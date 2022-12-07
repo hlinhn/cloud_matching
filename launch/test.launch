@@ -5,5 +5,5 @@
     <include file="$(find enway_bringup)/launch/donner/filter.launch">
         <arg name="state" value="true"/>
     </include>
-    <include file="$(find merge_maps_3d)/launch/node.launch" />
+    <include file="$(find cloud_matching)/launch/node.launch" />
 </launch>

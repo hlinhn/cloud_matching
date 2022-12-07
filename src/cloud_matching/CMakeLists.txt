@@ -2,12 +2,12 @@ set(SOURCES
   converter.cpp
   map_node.cpp
   ndt_matcher.cpp
-  phaser_matcher.cpp
+  # phaser_matcher.cpp
   gicp_matcher.cpp
   g2o_optimizer.cpp
   local_map_maker.cpp
   global_map_maker.cpp
-  merge_maps_3d.cpp
+  cloud_matching.cpp
   node.cpp
   main.cpp
   )
@@ -16,7 +16,7 @@ set(MATCHER_TEST_SOURCES
   ndt_matcher.cpp
   converter.cpp
   gicp_matcher.cpp
-  phaser_matcher.cpp
+  # phaser_matcher.cpp
   matcher_test.cpp
   )
 
@@ -30,6 +30,11 @@ add_executable(
   ${PROJECT_NAME}
   ${SOURCES}
 )
+
+add_library(
+  matcher_lib
+  ${MATCHER_TEST_SOURCES}
+  )
 
 add_executable(
   match_tester
@@ -66,6 +71,12 @@ target_link_libraries(
   optimize_tester
   ${catkin_LIBRARIES}
   ${G2O_LIBS}
+  )
+
+target_link_libraries(
+  matcher_lib
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
   )
 
 install(TARGETS ${PROJECT_NAME}

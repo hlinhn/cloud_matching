@@ -1,19 +1,19 @@
-#include "merge_maps_3d/phaser_matcher.h"
-#include "merge_maps_3d/converter.h"
+#include "cloud_matching/phaser_matcher.h"
+#include "cloud_matching/converter.h"
 #include <phaser/model/point-cloud.h>
 
-merge_maps_3d::PhaserMatcher::PhaserMatcher()
+cloud_matching::PhaserMatcher::PhaserMatcher()
 {
   controller_.reset(new phaser_core::CloudController("sph-opt"));
 }
 
-merge_maps_3d::PhaserMatcher::~PhaserMatcher()
+cloud_matching::PhaserMatcher::~PhaserMatcher()
 {
   controller_.reset();
 }
 
 std::optional<std::pair<Eigen::Matrix4f, Cloud::Ptr>>
-merge_maps_3d::PhaserMatcher::match(Cloud::Ptr orig, Cloud::Ptr addition, std::optional<Eigen::Matrix4f> initial_guess)
+cloud_matching::PhaserMatcher::match(Cloud::Ptr orig, Cloud::Ptr addition, std::optional<Eigen::Matrix4f> initial_guess)
 {
   model::PointCloudPtr orig_model(new model::PointCloud(orig));
   model::PointCloudPtr addition_model(new model::PointCloud(addition));

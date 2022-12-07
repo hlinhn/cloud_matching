@@ -1,5 +1,5 @@
-#include "merge_maps_3d/ndt_matcher.h"
-#include "merge_maps_3d/phaser_matcher.h"
+#include "cloud_matching/ndt_matcher.h"
+// #include "cloud_matching/phaser_matcher.h"
 #include <pcl/io/pcd_io.h>
 #include <pcl/io/ply_io.h>
 
@@ -41,7 +41,7 @@ main(int argc, char** argv)
     std::cerr << "Need two paths" << std::endl;
     return 1;
   }
-  auto test_matcher = merge_maps_3d::PhaserMatcher();
+  auto test_matcher = cloud_matching::NdtMatcher();
   auto small = readFile(std::string(argv[1]));
   if (!small)
   {

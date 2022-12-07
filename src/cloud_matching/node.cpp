@@ -1,18 +1,19 @@
-#include "merge_maps_3d/node.h"
-#include "merge_maps_3d/converter.h"
+#include "cloud_matching/node.h"
+#include "cloud_matching/converter.h"
 #include <cmath>
 #include <geometry_msgs/Point.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl_ros/point_cloud.h>
 #include <visualization_msgs/Marker.h>
 
-int merge_maps_3d::MapNode::node_id_ = 0;
+int cloud_matching::MapNode::node_id_ = 0;
 
-merge_maps_3d::Node::Node(ros::NodeHandle& node_handle)
+cloud_matching::Node::Node(ros::NodeHandle& node_handle)
   : local_map_maker_ {}
   , global_map_maker_ {}
   , added_first_node_ {false}
   , got_first_imu_ {false}
+  , updating_reconfigure_params_ {true}
 {
   current_lidar_odom_position_ = Eigen::Matrix4f::Identity();
   last_lidar_odom_position_ = Eigen::Matrix4f::Identity();
@@ -26,17 +27,40 @@ merge_maps_3d::Node::Node(ros::NodeHandle& node_handle)
   save_map_server_ = node_handle.advertiseService("save_map", &Node::saveMapCallback, this);
   visualization_pub_ = node_handle.advertise<geometry_msgs::PoseArray>("submaps", 1);
   loop_closure_viz_pub_ = node_handle.advertise<visualization_msgs::Marker>("loop_closure", 1);
+
+  dyn_reconf_server_ = std::make_unique<dynamic_reconfigure::Server<CloudMatchingConfig>>(node_handle);
+  dyn_reconf_server_->setCallback([this](auto&& config, auto&& level) { reconfigureCallback(config, level); });
+}
+
+void
+cloud_matching::Node::reconfigureCallback(CloudMatchingConfig& config, uint32_t /* level */)
+{
+  reconfigure_config_ = config;
+  updating_reconfigure_params_ = true;
+  updateReconfigureParams();
+}
+
+void
+cloud_matching::Node::updateReconfigureParams()
+{
+  if (!updating_reconfigure_params_)
+  {
+    return;
+  }
+  global_map_maker_.setConfig(reconfigure_config_);
+  updating_reconfigure_params_ = false;
 }
 
 bool
-merge_maps_3d::isFinite(Point p)
+cloud_matching::isFinite(Point p)
 {
   return !(std::isinf(p.x) || std::isinf(p.y) || std::isinf(p.z) || std::isnan(p.x) || std::isnan(p.y)
            || std::isnan(p.z));
 }
 
 bool
-merge_maps_3d::Node::saveMapCallback(std_srvs::Empty::Request& /* request */, std_srvs::Empty::Response& /* response */)
+cloud_matching::Node::saveMapCallback(std_srvs::Empty::Request& /* request */,
+                                      std_srvs::Empty::Response& /* response */)
 {
   auto all_cloud = global_map_maker_.createMap();
   pcl::io::savePCDFileBinary("test_map.pcd", *all_cloud);
@@ -44,7 +68,7 @@ merge_maps_3d::Node::saveMapCallback(std_srvs::Empty::Request& /* request */, st
 }
 
 void
-merge_maps_3d::Node::imuCallback(const sensor_msgs::Imu& imu)
+cloud_matching::Node::imuCallback(const sensor_msgs::Imu& imu)
 {
   const std::lock_guard<std::mutex> lock(guard_imu_);
   if (!got_first_imu_)
@@ -56,14 +80,14 @@ merge_maps_3d::Node::imuCallback(const sensor_msgs::Imu& imu)
 }
 
 void
-merge_maps_3d::Node::odomCallback(const nav_msgs::Odometry& odom)
+cloud_matching::Node::odomCallback(const nav_msgs::Odometry& odom)
 {
   const std::lock_guard<std::mutex> lock(guard_odom_);
   current_odom_position_ = toMatrix(odom);
 }
 
 Cloud::Ptr
-merge_maps_3d::Node::filter(Cloud::Ptr cloud)
+cloud_matching::Node::filter(Cloud::Ptr cloud)
 {
   Cloud::Ptr filtered(new Cloud());
   for (const auto p : *cloud)
@@ -77,7 +101,7 @@ merge_maps_3d::Node::filter(Cloud::Ptr cloud)
 }
 
 std::optional<Eigen::Matrix4f>
-merge_maps_3d::Node::initialGuess(std::optional<Eigen::Matrix4f> current_odom_position)
+cloud_matching::Node::initialGuess(std::optional<Eigen::Matrix4f> current_odom_position)
 {
   if (!current_odom_position)
   {
@@ -91,7 +115,7 @@ merge_maps_3d::Node::initialGuess(std::optional<Eigen::Matrix4f> current_odom_po
 }
 
 bool
-merge_maps_3d::Node::sufficient_distance(std::optional<Eigen::Matrix4f> current_position)
+cloud_matching::Node::sufficient_distance(std::optional<Eigen::Matrix4f> current_position)
 {
   if (!last_odom_position_ || !current_position)
   {
@@ -99,7 +123,7 @@ merge_maps_3d::Node::sufficient_distance(std::optional<Eigen::Matrix4f> current_
   }
   auto diff = last_odom_position_.value().inverse() * current_position.value();
   double distance_diff = diff.block<3, 1>(0, 3).norm();
-  if (distance_diff < 0.3)
+  if (distance_diff < 0.2)
   {
     return false;
   }
@@ -107,7 +131,7 @@ merge_maps_3d::Node::sufficient_distance(std::optional<Eigen::Matrix4f> current_
 }
 
 void
-merge_maps_3d::Node::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
+cloud_matching::Node::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {
   std::optional<Eigen::Matrix4f> current_odom_position_copy;
   {
@@ -176,14 +200,20 @@ merge_maps_3d::Node::cloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg
 }
 
 void
-merge_maps_3d::Node::globalMapCallback(const ros::TimerEvent& e)
+cloud_matching::Node::globalMapCallback(const ros::TimerEvent& e)
 {
   auto processing = global_map_maker_.getUnprocessedNode();
+  std::vector<int> processed;
   for (auto id : processing)
   {
     auto connections = global_map_maker_.checkLoopClosure(id);
+    if (!connections)
+    {
+      break;
+    }
+    processed.push_back(id);
   }
-  global_map_maker_.removeProcessedNode(processing);
+  global_map_maker_.removeProcessedNode(processed);
   global_map_maker_.optimizeAndUpdate();
   std::vector<Eigen::Matrix4f> submap_position = global_map_maker_.getUpdatedPosition();
   geometry_msgs::PoseArray visual;

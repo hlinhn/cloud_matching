@@ -1,12 +1,12 @@
-#ifndef MERGE_MAPS_3D_LOCAL_MAP_MAKER_H_
-#define MERGE_MAPS_3D_LOCAL_MAP_MAKER_H_
+#ifndef CLOUD_MATCHING_LOCAL_MAP_MAKER_H_
+#define CLOUD_MATCHING_LOCAL_MAP_MAKER_H_
 
-#include "merge_maps_3d/cloud_merger.h"
-#include "merge_maps_3d/map_node.h"
-#include "merge_maps_3d/ndt_matcher.h"
+#include "cloud_matching/cloud_merger.h"
+#include "cloud_matching/map_node.h"
+#include "cloud_matching/ndt_matcher.h"
 #include <optional>
 
-namespace merge_maps_3d
+namespace cloud_matching
 {
 class LocalMapMaker
 {
@@ -25,6 +25,6 @@ private:
   Eigen::Matrix4f origin_;
 };
 
-} // namespace merge_maps_3d
+} // namespace cloud_matching
 
 #endif

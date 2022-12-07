@@ -1,6 +1,6 @@
-#include "merge_maps_3d/ndt_matcher.h"
+#include "cloud_matching/ndt_matcher.h"
 
-merge_maps_3d::NdtMatcher::NdtMatcher()
+cloud_matching::NdtMatcher::NdtMatcher()
 {
   matcher_.reset(new pclomp::NormalDistributionsTransform<Point, Point>());
   matcher_->setTransformationEpsilon(0.01);
@@ -15,13 +15,13 @@ merge_maps_3d::NdtMatcher::NdtMatcher()
   downsample_filter_.reset(voxel_grid);
 }
 
-merge_maps_3d::NdtMatcher::~NdtMatcher()
+cloud_matching::NdtMatcher::~NdtMatcher()
 {
   matcher_.reset();
 }
 
 Cloud::Ptr
-merge_maps_3d::NdtMatcher::downsample(Cloud::Ptr cloud)
+cloud_matching::NdtMatcher::downsample(Cloud::Ptr cloud)
 {
   Cloud::Ptr filtered(new Cloud());
   downsample_filter_->setInputCloud(cloud);
@@ -30,7 +30,7 @@ merge_maps_3d::NdtMatcher::downsample(Cloud::Ptr cloud)
 }
 
 std::optional<std::pair<Eigen::Matrix4f, Cloud::Ptr>>
-merge_maps_3d::NdtMatcher::match(Cloud::Ptr orig, Cloud::Ptr addition, std::optional<Eigen::Matrix4f> initial_guess)
+cloud_matching::NdtMatcher::match(Cloud::Ptr orig, Cloud::Ptr addition, std::optional<Eigen::Matrix4f> initial_guess)
 {
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();
   if (initial_guess)
@@ -56,7 +56,7 @@ merge_maps_3d::NdtMatcher::match(Cloud::Ptr orig, Cloud::Ptr addition, std::opti
 }
 
 bool
-merge_maps_3d::NdtMatcher::isCompatible()
+cloud_matching::NdtMatcher::isCompatible()
 {
   double score = matcher_->getFitnessScore();
   return (matcher_->hasConverged() && score > 0.6);

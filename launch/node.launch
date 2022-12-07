@@ -8,8 +8,9 @@
   <param if="$(arg callgrind)" name="/bond_disable_heartbeat_timeout" value="true" />
   <arg if="$(eval not callgrind and not gdb)" name="prefix" value="" />
 
-  <node name="merge_maps_3d" pkg="merge_maps_3d" type="merge_maps_3d" launch-prefix="$(arg prefix)">
-    <remap from="/point_cloud" to="/sensors/lidar/front_mid/point_cloud_raw" />
+  <node name="cloud_matching" pkg="cloud_matching" type="cloud_matching" launch-prefix="$(arg prefix)">
+    <rosparam file="$(find cloud_matching)/config/config.yaml" command="load"/>
+    <remap from="/point_cloud" to="/sensors/lidar/front_mid/point_cloud" />
     <remap from="/imu" to="/sensors/imu/front_mid" />
     <!-- <remap from="/odom" to="/donner_articulated_drive_controller/odom"/> -->
   </node>

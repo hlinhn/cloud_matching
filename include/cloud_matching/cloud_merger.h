@@ -1,5 +1,5 @@
-#ifndef MERGE_MAPS_3D_CLOUD_MERGER_H_
-#define MERGE_MAPS_3D_CLOUD_MERGER_H_
+#ifndef CLOUD_MATCHING_CLOUD_MERGER_H_
+#define CLOUD_MATCHING_CLOUD_MERGER_H_
 
 #include <Eigen/Core>
 #include <optional>
@@ -9,7 +9,7 @@
 typedef pcl::PointXYZI Point;
 typedef pcl::PointCloud<Point> Cloud;
 
-namespace merge_maps_3d
+namespace cloud_matching
 {
 class CloudMerger
 {
@@ -20,6 +20,6 @@ public:
                                                                       Cloud::Ptr addition,
                                                                       std::optional<Eigen::Matrix4f> initial_guess) = 0;
 };
-} // namespace merge_maps_3d
+} // namespace cloud_matching
 
 #endif

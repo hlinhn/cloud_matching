@@ -1,5 +1,5 @@
-#ifndef MERGE_MAPS_3D_MAP_NODE_H_
-#define MERGE_MAPS_3D_MAP_NODE_H_
+#ifndef CLOUD_MATCHING_MAP_NODE_H_
+#define CLOUD_MATCHING_MAP_NODE_H_
 
 #include <Eigen/Core>
 #include <pcl/point_cloud.h>
@@ -8,7 +8,7 @@
 typedef pcl::PointXYZI Point;
 typedef pcl::PointCloud<Point> Cloud;
 
-namespace merge_maps_3d
+namespace cloud_matching
 {
 class MapNode
 {
@@ -20,11 +20,13 @@ public:
   ~MapNode();
   int id_;
   Eigen::Matrix4f position_;
+  Eigen::Matrix4f unoptimized_position_;
   Cloud::Ptr cloud_;
   Point top_right;
   Point bottom_left;
   Point gravity_center;
+  bool optimized_;
 };
-} // namespace merge_maps_3d
+} // namespace cloud_matching
 
 #endif

@@ -1,11 +1,11 @@
-#ifndef MERGE_MAPS_3D_GICP_MERGER_H_
-#define MERGE_MAPS_3D_GICP_MERGER_H_
+#ifndef CLOUD_MATCHING_GICP_MERGER_H_
+#define CLOUD_MATCHING_GICP_MERGER_H_
 
-#include "merge_maps_3d/cloud_merger.h"
+#include "cloud_matching/cloud_merger.h"
 #include <fast_gicp/gicp/fast_gicp.hpp>
 #include <pcl/filters/voxel_grid.h>
 
-namespace merge_maps_3d
+namespace cloud_matching
 {
 class GicpMatcher final : public CloudMerger
 {
@@ -23,6 +23,6 @@ private:
 
   Cloud::Ptr downsample(Cloud::Ptr cloud);
 };
-} // namespace merge_maps_3d
+} // namespace cloud_matching
 
 #endif

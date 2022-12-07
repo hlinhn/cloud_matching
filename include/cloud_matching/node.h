@@ -1,19 +1,20 @@
-#ifndef MERGE_MAPS_3D_NODE_H_
-#define MERGE_MAPS_3D_NODE_H_
+#ifndef CLOUD_MATCHING_NODE_H_
+#define CLOUD_MATCHING_NODE_H_
 
-#include "merge_maps_3d/global_map_maker.h"
-#include "merge_maps_3d/local_map_maker.h"
+#include "cloud_matching/CloudMatchingConfig.h"
+#include "cloud_matching/global_map_maker.h"
+#include "cloud_matching/local_map_maker.h"
 
 #include <mutex>
 
+#include <dynamic_reconfigure/server.h>
 #include <geometry_msgs/PoseArray.h>
 #include <nav_msgs/Odometry.h>
 #include <ros/node_handle.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_srvs/Empty.h>
-
-namespace merge_maps_3d
+namespace cloud_matching
 {
 bool isFinite(Point p);
 class Node
@@ -48,6 +49,11 @@ private:
 
   std::mutex guard_odom_;
   std::mutex guard_imu_;
+  std::unique_ptr<dynamic_reconfigure::Server<CloudMatchingConfig>> dyn_reconf_server_;
+  bool updating_reconfigure_params_;
+  CloudMatchingConfig reconfigure_config_;
+  void reconfigureCallback(CloudMatchingConfig& config, uint32_t /* level */);
+  void updateReconfigureParams();
 
   Cloud::Ptr filter(Cloud::Ptr cloud);
   std::optional<Eigen::Matrix4f> initialGuess(std::optional<Eigen::Matrix4f> current_odom_position);
@@ -59,6 +65,6 @@ private:
   bool saveMapCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 };
 
-} // namespace merge_maps_3d
+} // namespace cloud_matching
 
 #endif

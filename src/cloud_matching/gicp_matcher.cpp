@@ -1,6 +1,6 @@
-#include "merge_maps_3d/gicp_matcher.h"
+#include "cloud_matching/gicp_matcher.h"
 
-merge_maps_3d::GicpMatcher::GicpMatcher()
+cloud_matching::GicpMatcher::GicpMatcher()
 {
   matcher_.reset(new fast_gicp::FastGICP<Point, Point>());
   matcher_->setMaxCorrespondenceDistance(1.0);
@@ -11,10 +11,10 @@ merge_maps_3d::GicpMatcher::GicpMatcher()
   downsample_filter_.reset(voxel_grid);
 }
 
-merge_maps_3d::GicpMatcher::~GicpMatcher() {}
+cloud_matching::GicpMatcher::~GicpMatcher() {}
 
 Cloud::Ptr
-merge_maps_3d::GicpMatcher::downsample(Cloud::Ptr cloud)
+cloud_matching::GicpMatcher::downsample(Cloud::Ptr cloud)
 {
   Cloud::Ptr filtered(new Cloud());
   downsample_filter_->setInputCloud(cloud);
@@ -23,7 +23,7 @@ merge_maps_3d::GicpMatcher::downsample(Cloud::Ptr cloud)
 }
 
 std::optional<std::pair<Eigen::Matrix4f, Cloud::Ptr>>
-merge_maps_3d::GicpMatcher::match(Cloud::Ptr orig, Cloud::Ptr addition, std::optional<Eigen::Matrix4f> initial_guess)
+cloud_matching::GicpMatcher::match(Cloud::Ptr orig, Cloud::Ptr addition, std::optional<Eigen::Matrix4f> initial_guess)
 {
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();
   if (initial_guess)

@@ -1,7 +1,9 @@
-#include "merge_maps_3d/map_node.h"
+#include "cloud_matching/map_node.h"
 
-merge_maps_3d::MapNode::MapNode(Eigen::Matrix4f position, Cloud::Ptr cloud)
-  : position_(position)
+cloud_matching::MapNode::MapNode(Eigen::Matrix4f position, Cloud::Ptr cloud)
+  : position_ {position}
+  , unoptimized_position_ {position}
+  , optimized_ {false}
 {
   cloud_.reset(new Cloud(*cloud));
   node_id_++;
@@ -46,7 +48,7 @@ merge_maps_3d::MapNode::MapNode(Eigen::Matrix4f position, Cloud::Ptr cloud)
   gravity_center.y = ysum / cloud->size();
 }
 
-merge_maps_3d::MapNode::~MapNode()
+cloud_matching::MapNode::~MapNode()
 {
   cloud_.reset();
 }

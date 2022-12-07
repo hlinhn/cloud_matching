@@ -1,8 +1,8 @@
-#include "merge_maps_3d/global_map_maker.h"
-#include "merge_maps_3d/converter.h"
-#include "merge_maps_3d/g2o_optimizer.h"
-#include "merge_maps_3d/gicp_matcher.h"
-#include "merge_maps_3d/phaser_matcher.h"
+#include "cloud_matching/global_map_maker.h"
+#include "cloud_matching/converter.h"
+#include "cloud_matching/g2o_optimizer.h"
+#include "cloud_matching/gicp_matcher.h"
+// #include "cloud_matching/phaser_matcher.h"
 #include <pcl/io/pcd_io.h>
 
 void
@@ -21,14 +21,14 @@ print_mat(Eigen::Matrix4f mat)
   std::cout << std::endl;
 }
 
-merge_maps_3d::GlobalMapMaker::GlobalMapMaker()
+cloud_matching::GlobalMapMaker::GlobalMapMaker()
 {
   matcher_.reset(new NdtMatcher());
   optimizer_.reset(new G2oOptimizer());
 }
 
 // void
-// merge_maps_3d::GlobalMapMaker::setConfig(Config config)
+// cloud_matching::GlobalMapMaker::setConfig(Config config)
 // {
 //   config_ = config;
 // }
@@ -54,13 +54,14 @@ getConstantInformationMatrixLoop()
 Eigen::MatrixXd
 getImuInformationMatrix()
 {
-  Eigen::MatrixXd information = Eigen::MatrixXd::Identity(3, 3) / 10.0;
+  Eigen::MatrixXd information = Eigen::MatrixXd::Identity(3, 3) / 3.0;
   return information;
 }
 
 void
-merge_maps_3d::GlobalMapMaker::addNode(const merge_maps_3d::MapNode& map_node, bool fixed)
+cloud_matching::GlobalMapMaker::addNode(const cloud_matching::MapNode& map_node, bool fixed)
 {
+  const std::lock_guard<std::mutex> lock_node(node_mutex_);
   nodes_[map_node.id_] = map_node;
   std::cout << "Adding edge from " << map_node.id_ << " to " << map_node.id_ - 1 << std::endl;
   const std::lock_guard<std::mutex> lock(unprocessed_mutex_);
@@ -73,17 +74,21 @@ merge_maps_3d::GlobalMapMaker::addNode(const merge_maps_3d::MapNode& map_node, b
   }
   else
   {
-    optimizer_->addNode(map_node.position_, map_node.id_);
     auto information_matrix = getConstantInformationMatrix();
-    optimizer_->addEdge(map_node.id_,
-                        map_node.id_ - 1,
-                        nodes_[map_node.id_ - 1].position_.inverse() * nodes_[map_node.id_].position_,
-                        information_matrix);
+    {
+      auto link = nodes_[map_node.id_ - 1].unoptimized_position_.inverse() * map_node.unoptimized_position_;
+      if (nodes_[map_node.id_ - 1].optimized_)
+      {
+        nodes_[map_node.id_].position_ = nodes_[map_node.id_ - 1].position_ * link;
+      }
+      optimizer_->addNode(nodes_[map_node.id_].position_, map_node.id_);
+      optimizer_->addEdge(map_node.id_, map_node.id_ - 1, link, information_matrix);
+    }
   }
 }
 
 void
-merge_maps_3d::GlobalMapMaker::addImuEdge(const int node_id, std::optional<Eigen::Vector3d> imu_data)
+cloud_matching::GlobalMapMaker::addImuEdge(const int node_id, std::optional<Eigen::Vector3d> imu_data)
 {
   if (!imu_data)
   {
@@ -94,20 +99,37 @@ merge_maps_3d::GlobalMapMaker::addImuEdge(const int node_id, std::optional<Eigen
 }
 
 // double
-// merge_maps_3d::GlobalMapMaker::calculateIOU(int test_node, int propose_node)
+// cloud_matching::GlobalMapMaker::calculateIOU(int test_node, int propose_node)
 // {
 
 // }
 
-std::vector<merge_maps_3d::Matching>
-merge_maps_3d::GlobalMapMaker::checkLoopClosure(const int node_id)
+std::optional<std::vector<cloud_matching::Matching>>
+cloud_matching::GlobalMapMaker::checkLoopClosure(const int node_id)
 {
+  if (node_id >= 5 && !nodes_[node_id].optimized_ && !nodes_[node_id - 1].optimized_)
+  {
+    return std::nullopt;
+  }
   std::cout << "In loop closure check, checking " << nodes_.size() << std::endl;
+  if (!nodes_[node_id].optimized_ && node_id > 1)
+  {
+    std::cout << "CHANGE: ";
+    print_mat(nodes_[node_id].position_);
+    auto link = nodes_[node_id - 1].unoptimized_position_.inverse() * nodes_[node_id].unoptimized_position_;
+    nodes_[node_id].position_ = nodes_[node_id - 1].position_ * link;
+    std::cout << " TO ";
+    print_mat(nodes_[node_id].position_);
+  }
   auto node_position = nodes_[node_id].position_.inverse();
 
   std::vector<std::pair<int, int>> candidates;
   for (const auto data : nodes_)
   {
+    if (!data.second.optimized_)
+    {
+      break;
+    }
     if (node_id < data.first + 5)
     {
       break;
@@ -124,7 +146,7 @@ merge_maps_3d::GlobalMapMaker::checkLoopClosure(const int node_id)
     center_diff(0) = check_in_original(0) - nodes_[node_id].gravity_center.x;
     center_diff(1) = check_in_original(1) - nodes_[node_id].gravity_center.y;
     float distance = center_diff.norm();
-    if (distance > 6.0) // config_.max_loop_closure_check_distance)
+    if (distance > config_.maximum_distance_between_candidates)
     {
       continue;
     }
@@ -148,8 +170,10 @@ merge_maps_3d::GlobalMapMaker::checkLoopClosure(const int node_id)
 }
 
 std::optional<Eigen::Matrix4f>
-merge_maps_3d::GlobalMapMaker::checkPair(std::pair<int, int> candidate)
+cloud_matching::GlobalMapMaker::checkPair(std::pair<int, int> candidate)
 {
+  const std::lock_guard<std::mutex> matcher_lock(matcher_mutex_);
+  const std::lock_guard<std::mutex> lock(node_mutex_);
   auto proposed_node = nodes_[candidate.first];
   auto checking_node = nodes_[candidate.second];
   Cloud::Ptr checking_cloud(new Cloud());
@@ -182,25 +206,26 @@ merge_maps_3d::GlobalMapMaker::checkPair(std::pair<int, int> candidate)
 }
 
 std::vector<int>
-merge_maps_3d::GlobalMapMaker::getUnprocessedNode()
+cloud_matching::GlobalMapMaker::getUnprocessedNode()
 {
   const std::lock_guard<std::mutex> lock(unprocessed_mutex_);
   return unprocessed_nodes_;
 }
 
 void
-merge_maps_3d::GlobalMapMaker::removeProcessedNode(std::vector<int> processed)
+cloud_matching::GlobalMapMaker::removeProcessedNode(std::vector<int> processed)
 {
   const std::lock_guard<std::mutex> lock(unprocessed_mutex_);
   unprocessed_nodes_.erase(unprocessed_nodes_.begin(), unprocessed_nodes_.begin() + processed.size());
 }
 
 Cloud::Ptr
-merge_maps_3d::GlobalMapMaker::createMap()
+cloud_matching::GlobalMapMaker::createMap()
 {
   const std::lock_guard<std::mutex> lock(node_mutex_);
   Cloud::Ptr all_cloud(new Cloud());
 
+  pcl::io::savePCDFileBinary("cloud_1.pcd", *nodes_[1].cloud_);
   for (auto node_data : nodes_)
   {
     Cloud::Ptr transformed(new Cloud());
@@ -217,14 +242,21 @@ merge_maps_3d::GlobalMapMaker::createMap()
 }
 
 void
-merge_maps_3d::GlobalMapMaker::optimizeAndUpdate()
+cloud_matching::GlobalMapMaker::optimizeAndUpdate()
 {
   const std::lock_guard<std::mutex> lock(node_mutex_);
   std::cout << "==========BEFORE===================\n";
-  for (auto node_data : nodes_)
+  for (int i = 1; i < nodes_.size(); i++)
   {
-    std::cout << node_data.first << ": ";
-    print_mat(node_data.second.position_);
+    auto node_data = nodes_[i];
+    if (!node_data.optimized_)
+    {
+      auto link = nodes_[node_data.id_ - 1].unoptimized_position_.inverse() * node_data.unoptimized_position_;
+      node_data.position_ = nodes_[i - 1].position_ * link;
+      optimizer_->updateNode(node_data.position_, node_data.id_);
+    }
+    std::cout << node_data.id_ << ": ";
+    print_mat(node_data.position_);
   }
   optimizer_->optimize();
 
@@ -232,6 +264,7 @@ merge_maps_3d::GlobalMapMaker::optimizeAndUpdate()
   for (auto data : updated_info)
   {
     nodes_[data.first].position_ = data.second;
+    nodes_[data.first].optimized_ = true;
   }
 
   std::cout << "==========AFTER=====================\n";
@@ -243,7 +276,7 @@ merge_maps_3d::GlobalMapMaker::optimizeAndUpdate()
 }
 
 std::vector<Eigen::Matrix4f>
-merge_maps_3d::GlobalMapMaker::getUpdatedPosition()
+cloud_matching::GlobalMapMaker::getUpdatedPosition()
 {
   std::vector<Eigen::Matrix4f> collect;
   for (auto node_data : nodes_)
@@ -254,7 +287,7 @@ merge_maps_3d::GlobalMapMaker::getUpdatedPosition()
 }
 
 std::vector<std::pair<Eigen::Matrix4f, Eigen::Matrix4f>>
-merge_maps_3d::GlobalMapMaker::getLoopClosureLinks()
+cloud_matching::GlobalMapMaker::getLoopClosureLinks()
 {
   std::vector<std::pair<Eigen::Matrix4f, Eigen::Matrix4f>> links;
   for (auto pair : loop_closure_links_)
@@ -262,4 +295,29 @@ merge_maps_3d::GlobalMapMaker::getLoopClosureLinks()
     links.push_back(std::make_pair(nodes_[pair.first].position_, nodes_[pair.second].position_));
   }
   return links;
+}
+
+void
+cloud_matching::GlobalMapMaker::changeMatchingMethod(int type)
+{
+  const std::lock_guard<std::mutex> lock(matcher_mutex_);
+  if (type == 0)
+  {
+    matcher_.reset(new NdtMatcher());
+  }
+  if (type == 1)
+  {
+    matcher_.reset(new GicpMatcher());
+  }
+}
+
+void
+cloud_matching::GlobalMapMaker::setConfig(CloudMatchingConfig& config)
+{
+  if (config_.matching_type != config.matching_type)
+  {
+    changeMatchingMethod(config.matching_type);
+  }
+  config_ = config;
+  std::cout << config_.maximum_distance_between_candidates << std::endl;
 }
